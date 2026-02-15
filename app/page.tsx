@@ -1,24 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import MetricCard from './components/MetricCard';
-import TimeSeriesChart from './components/TimeSeriesChart';
-import TopPagesTable from './components/TopPagesTable';
-import TrafficSources from './components/TrafficSources';
-import DeviceBreakdown from './components/DeviceBreakdown';
 import { GA4DashboardData, fetchGA4Data } from './lib/mockGA4Data';
 
 export default function Home() {
   const [data, setData] = useState<GA4DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
       try {
         const dashboardData = await fetchGA4Data();
         setData(dashboardData);
-      } catch (error) {
-        console.error('Failed to load GA4 data:', error);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load GA4 data:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
@@ -38,114 +36,176 @@ export default function Home() {
     );
   }
 
-  if (!data) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-red-600">שגיאה בטעינת הנתונים</p>
+        <div className="text-center p-8">
+          <p className="text-red-600 text-xl mb-4">שגיאה בטעינת הנתונים</p>
+          <p className="text-gray-600">{error}</p>
+        </div>
       </div>
     );
   }
 
-  const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-red-600">אין נתונים להצגה</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Google Analytics 4 Dashboard
-              </h1>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                סקירת ביצועים - 30 ימים אחרונים
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              <span>נתונים מעודכנים</span>
-            </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Google Analytics 4 Dashboard
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            סקירת ביצועים - 30 ימים אחרונים
+          </p>
+        </header>
+
+        {/* Simple Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Users */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">משתמשים</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {data.metrics.users.toLocaleString('he-IL')}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {data.metrics.newUsers.toLocaleString('he-IL')} משתמשים חדשים
+            </p>
+          </div>
+
+          {/* Sessions */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">סשנים</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {data.metrics.sessions.toLocaleString('he-IL')}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {(data.metrics.sessions / data.metrics.users).toFixed(2)} סשנים למשתמש
+            </p>
+          </div>
+
+          {/* Page Views */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">צפיות בעמוד</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {data.metrics.pageViews.toLocaleString('he-IL')}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {(data.metrics.pageViews / data.metrics.sessions).toFixed(2)} עמודים לסשן
+            </p>
+          </div>
+
+          {/* Bounce Rate */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">שיעור יציאה</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {data.metrics.bounceRate}%
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              משך סשן: {Math.floor(data.metrics.avgSessionDuration / 60)}:{(data.metrics.avgSessionDuration % 60).toString().padStart(2, '0')}
+            </p>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <MetricCard
-            title="משתמשים"
-            value={data.metrics.users}
-            subtitle={`${data.metrics.newUsers.toLocaleString('he-IL')} משתמשים חדשים`}
-            trend={{ value: 12.5, isPositive: true }}
-            icon="👥"
-          />
-          <MetricCard
-            title="סשנים"
-            value={data.metrics.sessions}
-            subtitle={`${(data.metrics.sessions / data.metrics.users).toFixed(2)} סשנים למשתמש`}
-            trend={{ value: 8.3, isPositive: true }}
-            icon="📊"
-          />
-          <MetricCard
-            title="צפיות בעמוד"
-            value={data.metrics.pageViews}
-            subtitle={`${(data.metrics.pageViews / data.metrics.sessions).toFixed(2)} עמודים לסשן`}
-            trend={{ value: 5.7, isPositive: true }}
-            icon="📄"
-          />
-          <MetricCard
-            title="שיעור יציאה"
-            value={`${data.metrics.bounceRate}%`}
-            subtitle={`משך סשן ממוצע: ${formatDuration(data.metrics.avgSessionDuration)}`}
-            trend={{ value: 2.1, isPositive: false }}
-            icon="⏱️"
-          />
+        {/* Top Pages */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            דפים מובילים
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    נתיב
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    צפיות
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    משתמשים
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.topPages.map((page, index) => (
+                  <tr key={index} className="border-t dark:border-gray-700">
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {page.path}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                      {page.views.toLocaleString('he-IL')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                      {page.uniqueUsers.toLocaleString('he-IL')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Conversions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <MetricCard
-            title="המרות"
-            value={data.metrics.conversions}
-            subtitle="מטרות שהושגו"
-            trend={{ value: 15.2, isPositive: true }}
-            icon="🎯"
-          />
-          <MetricCard
-            title="שיעור המרה"
-            value={`${data.metrics.conversionRate}%`}
-            subtitle="מהסשנים הכוללים"
-            trend={{ value: 3.4, isPositive: true }}
-            icon="💰"
-          />
+        {/* Traffic Sources */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            מקורות תעבורה
+          </h2>
+          <div className="space-y-4">
+            {data.trafficSources.map((source, index) => (
+              <div key={index}>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{source.source}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {source.users.toLocaleString('he-IL')} משתמשים ({source.percentage}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full"
+                    style={{ width: `${source.percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Time Series Chart */}
-        <div className="mb-8">
-          <TimeSeriesChart data={data.timeSeriesData} />
-        </div>
-
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <TrafficSources sources={data.trafficSources} />
-          <DeviceBreakdown devices={data.deviceCategories} />
-        </div>
-
-        {/* Top Pages Table */}
-        <div className="mb-8">
-          <TopPagesTable pages={data.topPages} />
+        {/* Device Breakdown */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            פילוח לפי מכשירים
+          </h2>
+          <div className="space-y-3">
+            {data.deviceCategories.map((device, index) => (
+              <div key={index} className="flex justify-between items-center">
+                <span className="text-sm text-gray-700 dark:text-gray-300">{device.category}</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {device.users.toLocaleString('he-IL')} משתמשים
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {device.percentage}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Footer */}
-        <footer className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>נתוני GA4 לדוגמה - עודכנו לאחרונה: {new Date().toLocaleDateString('he-IL')}</p>
+        <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          <p>נתוני GA4 לדוגמה - עודכנו: {new Date().toLocaleDateString('he-IL')}</p>
         </footer>
-      </main>
+      </div>
     </div>
   );
 }
